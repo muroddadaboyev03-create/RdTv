@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RdTv - Real Backend Platform</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #06070d;
+            background-image: radial-gradient(circle at top right, rgba(157, 78, 221, 0.09), transparent 45%),
+                              radial-gradient(circle at bottom left, rgba(0, 242, 254, 0.06), transparent 45%);
+            color: #f3f4f6;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .neon-text { text-shadow: 0 0 10px rgba(157, 78, 221, 0.6), 0 0 20px rgba(0, 242, 254, 0.3); }
+        .hide-scroll::-webkit-scrollbar { width: 4px; }
+        .hide-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        @keyframes pulseGlow {
+            0%, 100% { text-shadow: 0 0 15px rgba(0, 242, 254, 0.6), 0 0 30px rgba(157, 78, 221, 0.4); transform: scale(1); }
+            50% { text-shadow: 0 0 30px rgba(0, 242, 254, 0.9), 0 0 50px rgba(157, 78, 221, 0.8); transform: scale(1.03); }
+        }
+        .intro-logo-glow { animation: pulseGlow 2s infinite ease-in-out; }
+        @keyframes progressBarFill { 0% { width: 0%; } 100% { width: 100%; } }
+        .loading-bar-fill { animation: progressBarFill 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .toast-animate { animation: slideIn 0.3s ease forwards, fadeOut 0.3s ease 2.7s forwards; }
+        @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative overflow-x-hidden">
+
+    <div id="site-intro" class="fixed inset-0 z-[100] bg-[#05060b] flex flex-col items-center justify-center transition-all duration-500 ease-in-out">
+        <div class="text-center space-y-6 select-none">
+            <h1 class="text-6xl md:text-7xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-purple-700 intro-logo-glow">RdTv</h1>
+            <div class="w-44 h-[2px] bg-white/5 rounded-full overflow-hidden mx-auto relative">
+                <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-cyan-400 to-purple-500 loading-bar-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed top-6 right-6 z-[90] flex flex-col gap-3 pointer-events-none"></div>
+
+    <header class="glass-panel sticky top-0 z-40 px-6 py-4 flex items-center justify-between border-b border-white/5 shadow-lg">
+        <a href="#" onclick="location.reload()" class="text-3xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-purple-600 neon-text">RdTv</a>
+        <div id="auth-buttons-zone">
+            <button onclick="openModal('login-modal')" class="glass-panel text-xs font-semibold px-5 py-2 rounded-xl border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500 hover:text-black transition duration-300">
+                <i class="fa-solid fa-right-to-bracket mr-2"></i>Kirish / Ro'yxatdan o'tish
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow p-6 max-w-7xl mx-auto w-full space-y-10 z-10">
+        <section class="flex flex-col items-center py-4 text-center max-w-2xl mx-auto space-y-6">
+            <div class="w-full relative">
+                <input type="text" id="search-input" oninput="searchMovies()" placeholder="Kino qidirish..." class="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-6 pl-12 text-sm focus:outline-none focus:border-cyan-400 transition backdrop-blur-md">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-gray-400"></i>
+            </div>
+            <div class="flex flex-wrap justify-center gap-3 w-full">
+                <button onclick="filterCategory('all')" id="cat-all" class="glass-panel px-5 py-2 rounded-xl text-xs font-semibold text-cyan-400 border-white/10">Barchasi</button>
+                <button onclick="filterCategory('Multiklar')" id="cat-Multiklar" class="glass-panel px-5 py-2 rounded-xl text-xs font-semibold border-white/5">Multiklar</button>
+                <button onclick="filterCategory('Seriallar')" id="cat-Seriallar" class="glass-panel px-5 py-2 rounded-xl text-xs font-semibold border-white/5">Seriallar</button>
+                <button onclick="filterCategory('Kinolar')" id="cat-Kinolar" class="glass-panel px-5 py-2 rounded-xl text-xs font-semibold border-white/5">Kinolar</button>
+            </div>
+        </section>
+
+        <section id="admin-actions" class="hidden flex justify-end">
+            <button onclick="openModal('add-movie-modal')" class="glass-panel text-purple-300 border-purple-500/40 text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-purple-500 hover:text-white transition shadow-lg"><i class="fa-solid fa-plus mr-2"></i>Kino Yuklash</button>
+        </section>
+
+        <div id="locked-view" class="w-full py-16 flex flex-col items-center text-center space-y-4 glass-panel rounded-3xl border border-white/5 p-8">
+            <div class="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 text-2xl shadow-lg"><i class="fa-solid fa-lock"></i></div>
+            <h2 class="text-xl font-bold">Platforma Bloklangan</h2>
+            <p class="text-sm text-gray-400 max-w-md">Kino va seriallarni ko'rish va fikr qoldirish uchun tizimga kirishingiz yoki ro'yxatdan o'tishingiz shart.</p>
+        </div>
+
+        <div id="unlocked-view" class="hidden space-y-10">
+            <section id="player-section" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="glass-panel rounded-2xl overflow-hidden aspect-video border-white/5 bg-black">
+                        <video id="main-player" controls class="w-full h-full object-cover"></video>
+                    </div>
+                    <div class="flex justify-between items-start">
+                        <div class="space-y-1 flex-1 pr-4">
+                            <h2 id="player-title" class="text-2xl font-bold text-gray-100"></h2>
+                            <p class="text-xs text-purple-400" id="player-cat"></p>
+                            <p id="player-desc" class="text-xs text-gray-400 bg-white/5 p-3 rounded-xl border border-white/5 mt-3 leading-relaxed"></p>
+                        </div>
+                        <div class="flex gap-3 text-sm shrink-0">
+                            <span class="glass-panel px-3 py-1.5 rounded-lg text-gray-300"><i class="fa-solid fa-eye text-cyan-400 mr-1.5"></i><span id="p-views">0</span></span>
+                            <button onclick="likeMovie()" class="glass-panel px-3 py-1.5 rounded-lg text-gray-300 hover:bg-white/5 transition"><i class="fa-solid fa-heart text-purple-400 mr-1.5"></i><span id="p-likes">0</span></button>
+                        </div>
+                    </div>
+                    <div class="glass-panel rounded-2xl p-5 border border-white/5">
+                        <h3 class="text-sm font-bold text-cyan-400 mb-4">Izohlar</h3>
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="comment-input" placeholder="Fikringizni qoldiring..." class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400">
+                            <button onclick="addComment()" class="glass-panel text-cyan-300 px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-cyan-500/20 transition">Yuborish</button>
+                        </div>
+                        <div id="comments-list" class="space-y-3 max-h-48 overflow-y-auto hide-scroll text-sm"></div>
+                    </div>
+                </div>
+                <div class="glass-panel rounded-2xl p-4 flex flex-col max-h-[500px] border border-white/5">
+                    <h3 class="text-xs font-bold mb-4 text-purple-400 uppercase tracking-widest pb-2 border-b border-white/5">Tavsiyalar</h3>
+                    <div class="space-y-3 overflow-y-auto flex-1 hide-scroll" id="playlist-list"></div>
+                </div>
+            </section>
+
+            <section class="space-y-4">
+                <h2 class="text-lg font-bold border-l-4 border-cyan-400 pl-3">Mavjud Kontentlar</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5" id="movies-grid"></div>
+                <div id="empty-state" class="text-center py-12 text-sm text-gray-500 hidden">Kontent topilmadi.</div>
+            </section>
+        </div>
+    </main>
+
+    <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden p-4">
+        <div class="glass-panel w-full max-w-sm rounded-2xl p-6 space-y-4 relative">
+            <button onclick="closeModal('login-modal')" class="absolute top-4 right-4 text-gray-400"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-lg font-bold text-center text-cyan-400">Tizimga Kirish</h3>
+            <input type="text" id="login-user" placeholder="Login" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-cyan-400 text-gray-200">
+            <input type="password" id="login-pass" placeholder="Parol" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-cyan-400 text-gray-200">
+            <button onclick="handleLogin()" class="w-full py-2.5 rounded-xl bg-cyan-500 text-black font-bold text-sm hover:bg-cyan-400 transition">Kirish</button>
+            <p class="text-xs text-center text-gray-400">Akkountingiz yo'qmi? <span onclick="closeModal('login-modal'); openModal('register-modal')" class="text-purple-400 cursor-pointer hover:underline">Ro'yxatdan o'tish</span></p>
+        </div>
+    </div>
+
+    <div id="register-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden p-4">
+        <div class="glass-panel w-full max-w-sm rounded-2xl p-6 space-y-4 relative">
+            <button onclick="closeModal('register-modal')" class="absolute top-4 right-4 text-gray-400"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-lg font-bold text-center text-purple-400">Ro'yxatdan O'tish</h3>
+            <input type="text" id="reg-name" placeholder="Ismingiz (Masalan: Ali)" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-purple-400 text-gray-200">
+            <input type="text" id="reg-user" placeholder="Yangi Login" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-purple-400 text-gray-200">
+            <input type="password" id="reg-pass" placeholder="Yangi Parol" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-purple-400 text-gray-200">
+            <button onclick="handleRegister()" class="w-full py-2.5 rounded-xl bg-purple-500 text-white font-bold text-sm hover:bg-purple-400 transition">Ro'yxatdan o'tish</button>
+            <p class="text-xs text-center text-gray-400">Akkountingiz bormi? <span onclick="closeModal('register-modal'); openModal('login-modal')" class="text-cyan-400 cursor-pointer hover:underline">Kirish</span></p>
+        </div>
+    </div>
+
+    <div id="add-movie-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden p-4">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-6 space-y-3 relative">
+            <button onclick="closeModal('add-movie-modal')" class="absolute top-4 right-4 text-gray-400"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-lg font-bold text-purple-400 mb-2">Yangi Kino Qo'shish</h3>
+            <input type="text" id="m-title" placeholder="Kino nomi" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none text-gray-200">
+            <select id="m-category" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-300">
+                <option value="Kinolar">Kinolar</option>
+                <option value="Seriallar">Seriallar</option>
+                <option value="Multiklar">Multiklar</option>
+            </select>
+            <label class="block text-xs text-gray-400">Video (.mp4):</label>
+            <input type="file" id="m-video-file" accept="video/*" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs">
+            <label class="block text-xs text-gray-400">Poster (Rasm):</label>
+            <input type="file" id="m-poster-file" accept="image/*" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs">
+            <label class="block text-xs text-gray-400">Kino tavsifi:</label>
+            <textarea id="m-description" placeholder="Kino haqida qisqacha tavsif..." rows="3" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none resize-none text-gray-200 focus:border-purple-400"></textarea>
+            
+            <button onclick="saveNewMovie()" id="upload-btn" class="w-full py-2.5 rounded-xl bg-purple-500 text-white font-bold text-sm mt-4">Platformaga yuklash</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+        let moviesData = [];
+        let currentFilter = 'all';
+        let searchQuery = '';
+        let currentMovieId = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const intro = document.getElementById('site-intro');
+                if(intro) { intro.classList.add('opacity-0', 'pointer-events-none'); setTimeout(() => intro.remove(), 500); }
+            }, 1500);
+
+            // Avval kirgan foydalanuvchini tekshirish
+            if(localStorage.getItem('rdtv_user_logged')) {
+                setupUIForUser(localStorage.getItem('rdtv_user_role'), localStorage.getItem('rdtv_user_name'));
+            }
+        });
+
+        function showNotification(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let colors = type === 'success' ? 'text-purple-400 border-purple-500/40' : type === 'error' ? 'text-red-400 border-red-500/40' : 'text-cyan-400 border-cyan-500/40';
+            toast.className = `glass-panel px-4 py-3 rounded-xl border text-xs font-semibold shadow-xl bg-black/80 toast-animate ${colors}`;
+            toast.innerHTML = `<span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        async function handleRegister() {
+            const name = document.getElementById('reg-name').value;
+            const username = document.getElementById('reg-user').value;
+            const password = document.getElementById('reg-pass').value;
+
+            if(!name || !username || !password) return showNotification("Maydonlarni to'ldiring!", "error");
+
+            try {
+                const res = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, username, password })
+                });
+                const data = await res.json();
+                
+                if(res.ok) {
+                    showNotification(data.message, "success");
+                    closeModal('register-modal');
+                    openModal('login-modal');
+                    document.getElementById('reg-name').value = '';
+                    document.getElementById('reg-user').value = '';
+                    document.getElementById('reg-pass').value = '';
+                } else {
+                    showNotification(data.error, "error");
+                }
+            } catch {
+                showNotification("Server bilan ulanish uzildi!", "error");
+            }
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('login-user').value;
+            const password = document.getElementById('login-pass').value;
+
+            if(!username || !password) return showNotification("Maydonlarni to'ldiring!", "error");
+
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if(res.ok) {
+                    localStorage.setItem('rdtv_user_logged', 'true');
+                    localStorage.setItem('rdtv_user_role', data.role);
+                    localStorage.setItem('rdtv_user_name', data.name);
+                    
+                    closeModal('login-modal');
+                    setupUIForUser(data.role, data.name);
+                    showNotification(`Xush kelibsiz, ${data.name}!`, "success");
+                } else {
+                    showNotification(data.error, "error");
+                }
+            } catch {
+                showNotification("Login yoki parol xato yoki server yoniq emas!", "error");
+            }
+        }
+
+        function setupUIForUser(role, name) {
+            document.getElementById('locked-view').classList.add('hidden');
+            document.getElementById('unlocked-view').classList.remove('hidden');
+            
+            if(role === 'admin') {
+                document.getElementById('admin-actions').classList.remove('hidden');
+                document.getElementById('auth-buttons-zone').innerHTML = `
+                    <span class="text-xs bg-cyan-400/10 text-cyan-400 border border-cyan-400/20 px-3 py-1.5 rounded-xl font-medium"><i class="fa-solid fa-user-shield mr-1"></i> Admin</span>
+                    <button onclick="logout()" class="text-xs text-red-400 ml-2 hover:underline">Chiqish</button>
+                `;
+            } else {
+                document.getElementById('admin-actions').classList.add('hidden');
+                document.getElementById('auth-buttons-zone').innerHTML = `
+                    <span class="text-xs bg-purple-400/10 text-purple-400 border border-purple-400/20 px-3 py-1.5 rounded-xl font-medium"><i class="fa-solid fa-user mr-1"></i> ${name}</span>
+                    <button onclick="logout()" class="text-xs text-red-400 ml-2 hover:underline">Chiqish</button>
+                `;
+            }
+            loadMovies();
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        async function loadMovies() {
+            try {
+                const res = await fetch(`${API_URL}/movies`);
+                moviesData = await res.json();
+                renderMovies();
+            } catch (err) {
+                showNotification("Backend ma'lumotlari yuklanmadi.", "error");
+            }
+        }
+
+        function renderMovies() {
+            const grid = document.getElementById('movies-grid');
+            let filtered = moviesData.filter(m => currentFilter === 'all' || m.category === currentFilter);
+            if(searchQuery) filtered = filtered.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
+
+            const isAdmin = localStorage.getItem('rdtv_user_role') === 'admin';
+
+            if(filtered.length === 0) { grid.innerHTML = ''; document.getElementById('empty-state').classList.remove('hidden'); return; }
+            document.getElementById('empty-state').classList.add('hidden');
+
+            grid.innerHTML = filtered.map(m => `
+                <div class="glass-panel rounded-2xl overflow-hidden cursor-pointer group hover:scale-[1.02] hover:border-cyan-500/30 transition duration-300 relative">
+                    ${isAdmin ? `
+                        <button onclick="event.stopPropagation(); deleteMovie(${m.id})" class="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white rounded-lg flex items-center justify-center border border-red-500/30 transition duration-200" title="O'chirish">
+                            <i class="fa-solid fa-trash text-xs"></i>
+                        </button>
+                    ` : ''}
+                    <div onclick="playMovie(${m.id})" class="aspect-[3/4] bg-gray-900"><img src="${window.location.origin}${m.poster}" class="w-full h-full object-cover"></div>
+                    <div onclick="playMovie(${m.id})" class="p-3">
+                        <h4 class="font-semibold text-xs truncate text-gray-200 group-hover:text-cyan-400 transition">${m.title}</h4>
+                        <div class="flex gap-3 text-[10px] text-gray-400 mt-1.5">
+                            <span><i class="fa-solid fa-eye text-cyan-400/70 mr-1"></i>${m.views}</span>
+                            <span><i class="fa-solid fa-heart text-purple-400/70 mr-1"></i>${m.likes}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('playlist-list').innerHTML = moviesData.slice(0, 6).map(m => `
+                <div onclick="playMovie(${m.id})" class="flex gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition border border-transparent hover:border-white/5 group">
+                    <img src="${window.location.origin}${m.poster}" class="w-16 h-12 rounded-lg object-cover bg-gray-900">
+                    <div class="flex-1 flex flex-col justify-center min-w-0">
+                        <h5 class="text-xs font-medium truncate group-hover:text-cyan-400">${m.title}</h5>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function deleteMovie(id) {
+            if(!confirm("Haqiqatdan ham o'chirmoqchimisiz?")) return;
+            try {
+                const res = await fetch(`${API_URL}/movies/${id}`, { method: 'DELETE' });
+                if(res.ok) {
+                    showNotification("Muvaffaqiyatli o'chirildi!", "success");
+                    if(currentMovieId === id) {
+                        document.getElementById('player-section').classList.add('hidden');
+                        document.getElementById('main-player').pause();
+                    }
+                    loadMovies();
+                }
+            } catch { showNotification("Xatolik yuz berdi!", "error"); }
+        }
+
+        async function saveNewMovie() {
+            const title = document.getElementById('m-title').value;
+            const category = document.getElementById('m-category').value;
+            const description = document.getElementById('m-description').value;
+            const videoFile = document.getElementById('m-video-file').files[0];
+            const posterFile = document.getElementById('m-poster-file').files[0];
+            const btn = document.getElementById('upload-btn');
+
+            if(!title || !videoFile || !posterFile) return showNotification("Maydonlarni to'ldiring!", "error");
+
+            btn.innerText = "Yuklanmoqda...";
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('category', category);
+            formData.append('description', description);
+            formData.append('video', videoFile);
+            formData.append('poster', posterFile);
+
+            try {
+                const res = await fetch(`${API_URL}/movies`, { method: 'POST', body: formData });
+                if(res.ok) {
+                    showNotification("Muvaffaqiyatli yuklandi!", "success");
+                    closeModal('add-movie-modal');
+                    document.getElementById('m-title').value = '';
+                    document.getElementById('m-description').value = '';
+                    document.getElementById('m-video-file').value = '';
+                    document.getElementById('m-poster-file').value = '';
+                    loadMovies();
+                } else { showNotification("Xatolik yuz berdi!", "error"); }
+            } catch { showNotification("Server hatoligi!", "error"); }
+            
+            btn.innerText = "Platformaga yuklash";
+            btn.disabled = false;
+        }
+
+        async function playMovie(id) {
+            const m = moviesData.find(x => x.id === id);
+            if(!m) return;
+            currentMovieId = id;
+            document.getElementById('player-section').classList.remove('hidden');
+            
+            const player = document.getElementById('main-player');
+            player.src = `${window.location.origin}${m.videoUrl}`;
+            player.play().catch(() => {});
+
+            document.getElementById('player-title').innerText = m.title;
+            document.getElementById('player-cat').innerText = `Kategoriya: ${m.category}`;
+            
+            const descBox = document.getElementById('player-desc');
+            descBox.innerText = (m.description && m.description.trim()) ? m.description : "Ushbu kontent uchun qisqacha tavsif mavjud emas.";
+
+            try {
+                const res = await fetch(`${API_URL}/movies/${id}/view`, { method: 'POST' });
+                const json = await res.json();
+                document.getElementById('p-views').innerText = json.views;
+                m.views = json.views;
+            } catch {}
+
+            document.getElementById('p-likes').innerText = m.likes;
+            renderComments(m.comments);
+            window.scrollTo({ top: document.getElementById('player-section').offsetTop - 20, behavior: 'smooth' });
+        }
+
+        async function likeMovie() {
+            if(!currentMovieId) return;
+            try {
+                const res = await fetch(`${API_URL}/movies/${currentMovieId}/like`, { method: 'POST' });
+                const json = await res.json();
+                document.getElementById('p-likes').innerText = json.likes;
+                const m = moviesData.find(x => x.id === currentMovieId);
+                if(m) m.likes = json.likes;
+                renderMovies();
+            } catch {}
+        }
+
+        async function addComment() {
+            const text = document.getElementById('comment-input').value;
+            if(!text.trim() || !currentMovieId) return;
+
+            try {
+                const res = await fetch(`${API_URL}/movies/${currentMovieId}/comment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                if(res.ok) {
+                    const comment = await res.json();
+                    const m = moviesData.find(x => x.id === currentMovieId);
+                    m.comments.push(comment);
+                    document.getElementById('comment-input').value = '';
+                    renderComments(m.comments);
+                }
+            } catch {}
+        }
+
+        function translateDate(dateStr) { return dateStr; }
+
+        function renderComments(comments) {
+            const list = document.getElementById('comments-list');
+            if(!comments || !comments.length) { list.innerHTML = '<p class="text-xs text-gray-500">Hozircha izohlar yo\'q.</p>'; return; }
+            list.innerHTML = comments.map(c => `<div class="bg-white/5 p-3 rounded-xl border border-white/5 mb-2"><span class="text-[10px] text-gray-400 font-medium">Foydalanuvchi • ${c.date}</span><p class="text-xs text-gray-200 mt-0.5">${c.text}</p></div>`).reverse().join('');
+        }
+
+        function filterCategory(cat) {
+            currentFilter = cat;
+            ['all', 'Multiklar', 'Seriallar', 'Kinolar'].forEach(c => {
+                const el = document.getElementById(`cat-${c}`);
+                if(el) {
+                    if(c === cat) el.classList.add('text-cyan-400', 'bg-white/5', 'border-white/10');
+                    else el.classList.remove('text-cyan-400', 'bg-white/5', 'border-white/10');
+                }
+            });
+            renderMovies();
+        }
+
+        function searchMovies() { searchQuery = document.getElementById('search-input').value; renderMovies(); }
+    </script>
+</body>
+</html>
